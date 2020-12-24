@@ -344,3 +344,106 @@ export const TEST_ONLY = {
   k8sV1CustomObjectClient,
   parseTensorboardLogDir,
 };
+
+
+/** Flexy-vis */
+
+export async function newFlexyVisInstance(
+  logdir: string,
+  namespace: string,
+  params: object,
+  podTemplateSpec: object = defaultPodTemplateSpec,
+): Promise<void> {
+  // const currentPod = await getFlexyVisInstance(logdir, namespace);
+  // if (currentPod.podAddress) {
+  //   if (tfversion === currentPod.tfVersion) {
+  //     return;
+  //   } else {
+  //     throw new Error(
+  //       `There's already an existing tensorboard instance with a different version ${currentPod.tfVersion}`,
+  //     );
+  //   }
+  // }
+  const body = {
+    apiVersion: viewerGroup + '/' + viewerVersion,
+    kind: 'Viewer',
+    metadata: {
+      name: getNameOfViewerResource(logdir),
+      namespace,
+    },
+    spec: {
+      podTemplateSpec,
+      flexyVisSpec: params,
+      type: 'flexy-vis',
+    },
+  };
+  await k8sV1CustomObjectClient.createNamespacedCustomObject(
+    viewerGroup,
+    viewerVersion,
+    namespace,
+    viewerPlural,
+    body,
+  );
+}
+
+export async function getFlexyVisInstance(
+  logdir: string,
+  namespace: string,
+): Promise<{ podAddress: string; }> {
+  return await k8sV1CustomObjectClient
+    .getNamespacedCustomObject(
+      viewerGroup,
+      viewerVersion,
+      namespace,
+      viewerPlural,
+      getNameOfViewerResource(logdir),
+    )
+    .then(
+      // Viewer CRD pod has tensorboard instance running at port 6006 while
+      // viewer CRD service has tensorboard instance running at port 80. Since
+      // we return service address here (instead of pod address), so use 80.
+
+      // remove to check viewer.body.spec.tensorboardSpec.logDir===logdir
+      // actually getNameOfViewerResource(logdir) may have hash collision
+      // but if there is a hash collision, not check logdir will return error tensorboard link
+      // if check logdir and then create Viewer CRD with same name will break anyway.
+      // TODO fix hash collision
+      (viewer: any) => {
+        if (viewer && viewer.body && viewer.body.spec.type === 'flexy-vis') {
+          const address = `http://${viewer.body.metadata.name}-service.${namespace}.svc.cluster.local:80/flexy-vis/${viewer.body.metadata.name}/`;
+          return { podAddress: address };
+        } else {
+          return { podAddress: '' };
+        }
+      },
+      // No existing custom object with the given name, i.e., no existing
+      // tensorboard instance.
+      err => {
+        // This is often expected, so only use debug level for logging.
+        console.debug(
+          `Failed getting viewer custom object for logdir=${logdir} in ${namespace} namespace, err: `,
+          err?.body || err,
+        );
+        return { podAddress: '' };
+      },
+    );
+}
+
+export async function deleteFlexyVisInstance(logdir: string, namespace: string): Promise<void> {
+  // const currentPod = await getTensorboardInstance(logdir, namespace);
+  // if (!currentPod.podAddress) {
+  //   return;
+  // }
+
+  const viewerName = getNameOfViewerResource(logdir);
+  const deleteOption = new V1DeleteOptions();
+
+  await k8sV1CustomObjectClient.deleteNamespacedCustomObject(
+    viewerGroup,
+    viewerVersion,
+    namespace,
+    viewerPlural,
+    viewerName,
+    deleteOption,
+  );
+}

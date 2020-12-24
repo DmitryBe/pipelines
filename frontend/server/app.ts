@@ -25,6 +25,7 @@ import {
   getArtifactServiceGetter,
 } from './handlers/artifacts';
 import { getTensorboardHandlers } from './handlers/tensorboard';
+import { getFlexyVisHandlers } from './handlers/flexy-vis';
 import { getAuthorizeFn } from './helpers/auth';
 import { getPodLogsHandler } from './handlers/pod-logs';
 import { podInfoHandler, podEventsHandler } from './handlers/pod-info';
@@ -162,6 +163,16 @@ function createUIServer(options: UIConfigs) {
   registerHandler(app.get, '/apps/tensorboard', tensorboardGetHandler);
   registerHandler(app.delete, '/apps/tensorboard', tensorboardDeleteHandler);
   registerHandler(app.post, '/apps/tensorboard', tensorboardCreateHandler);
+
+  /** Flexy visualisation viewer */
+  const {
+    get: flexyGetHandler,
+    create: flexyCreateHandler,
+    delete: flexyDeleteHandler,
+  } = getFlexyVisHandlers(options.viewer.tensorboard, authorizeFn);
+  registerHandler(app.get, '/apps/flexy-vis', flexyGetHandler);
+  registerHandler(app.delete, '/apps/flexy-vis', flexyDeleteHandler);
+  registerHandler(app.post, '/apps/flexy-vis', flexyCreateHandler);
 
   /** Pod logs - conditionally stream through API server, otherwise directly from k8s and archive */
   if (options.artifacts.streamLogsFromServerApi) {
