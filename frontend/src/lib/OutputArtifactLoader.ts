@@ -35,6 +35,7 @@ import { MarkdownViewerConfig } from '../components/viewers/MarkdownViewer';
 import { PagedTableConfig } from '../components/viewers/PagedTable';
 import { ROCCurveConfig } from '../components/viewers/ROCCurve';
 import { TensorboardViewerConfig } from '../components/viewers/Tensorboard';
+import { FlexyVisViewerConfig } from '../components/viewers/FlexyVis';
 import { PlotType, ViewerConfig } from '../components/viewers/Viewer';
 import { Apis } from '../lib/Apis';
 import { errorToMessage, logger } from './Utils';
@@ -100,6 +101,9 @@ export class OutputArtifactLoader {
             return await this.buildHtmlViewerConfig(metadata, getSourceContent);
           case PlotType.ROC:
             return await this.buildRocCurveConfig(metadata, getSourceContent);
+          case PlotType.FLEXY_VIS:
+            logger.verbose('build flexy-vis config')
+            return await this.buildFlexyVisConfig(metadata, namespace)
           default:
             logger.error('Unknown plot type: ' + metadata.type);
             return null;
@@ -213,6 +217,33 @@ export class OutputArtifactLoader {
       type: PlotType.TENSORBOARD,
       url: metadata.source,
       namespace,
+    };
+  }
+
+  public static async buildFlexyVisConfig(
+    metadata: PlotMetadataContent,
+    namespace?: string,
+  ): Promise<FlexyVisViewerConfig> {
+    if (!metadata.source) {
+      throw new Error('Malformed metadata, property "source" is required.');
+    }
+    if (!namespace) {
+      throw new Error('Namespace is required.');
+    }
+
+    var params = new Map(Object.entries(metadata)) as Map<string, string>;
+    params.delete("type");
+    params.delete("source"); // project git url
+    if (!params.has("entry_point")) {
+      throw new Error('entry_point is required.');
+    }
+    
+    WorkflowParser.parseStoragePath(metadata.source);
+    return {
+      type: PlotType.FLEXY_VIS,
+      url: metadata.source,
+      namespace,
+      params
     };
   }
 

@@ -21,6 +21,7 @@ import MarkdownViewer from './MarkdownViewer';
 import PagedTable from './PagedTable';
 import ROCCurve from './ROCCurve';
 import TensorboardViewer from './Tensorboard';
+import FlexyVisViewer from './FlexyVis';
 import { PlotType, ViewerConfig } from './Viewer';
 import VisualizationCreator from './VisualizationCreator';
 
@@ -32,6 +33,7 @@ export const componentMap: Record<PlotType, ComponentType<any>> = {
   [PlotType.TENSORBOARD]: TensorboardViewer,
   [PlotType.VISUALIZATION_CREATOR]: VisualizationCreator,
   [PlotType.WEB_APP]: HTMLViewer,
+  [PlotType.FLEXY_VIS]: FlexyVisViewer,
 };
 
 interface ViewerContainerProps {

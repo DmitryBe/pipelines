@@ -23,6 +23,7 @@ import { PlotType } from '../components/viewers/Viewer';
 import * as Utils from './Utils';
 import { StoragePath } from './WorkflowParser';
 import { buildQuery } from './Utils';
+import { logger } from '@kubeflow/frontend';
 
 const v1beta1Prefix = 'apis/v1beta1';
 
@@ -265,6 +266,17 @@ export class Apis {
     );
   }
 
+  public static getFlexyVisApp(
+    logdir: string,
+    namespace: string,
+  ): Promise<{ podAddress: string; tfVersion: string }> {
+    return this._fetchAndParse<{ podAddress: string; tfVersion: string }>(
+      `apps/flexy-vis?logdir=${encodeURIComponent(logdir)}&namespace=${encodeURIComponent(
+        namespace,
+      )}`,
+    );
+  }
+
   /**
    * Starts a deployment and service for Tensorboard given the logdir
    */
@@ -283,11 +295,30 @@ export class Apis {
     );
   }
 
+  public static startFlexyVisApp(
+    logdir: string,
+    namespace: string,
+    paramsUrlStr: string,
+  ): Promise<string> {
+    return this._fetch(
+      `apps/flexy-vis?logdir=${encodeURIComponent(logdir)}&source=${encodeURIComponent(logdir)}&namespace=${encodeURIComponent(namespace)}&${paramsUrlStr}`,
+      undefined,
+      undefined,
+      { headers: { 'content-type': 'application/json' }, method: 'POST' },
+    );
+  }
+
   /**
    * Check if the underlying Tensorboard pod is actually up, given the pod address
    */
   public static async isTensorboardPodReady(path: string): Promise<boolean> {
     const resp = await fetch(path, { method: 'HEAD' });
+    return resp.ok;
+  }
+
+  public static async isFlexyVisPodReady(path: string): Promise<boolean> {
+    const resp = await fetch(path, { method: 'HEAD', mode: 'no-cors' });
+    logger.verbose(resp)
     return resp.ok;
   }
 
@@ -297,6 +328,17 @@ export class Apis {
   public static deleteTensorboardApp(logdir: string, namespace: string): Promise<string> {
     return this._fetch(
       `apps/tensorboard?logdir=${encodeURIComponent(logdir)}&namespace=${encodeURIComponent(
+        namespace,
+      )}`,
+      undefined,
+      undefined,
+      { method: 'DELETE' },
+    );
+  }
+
+  public static deleteFlexyVisApp(logdir: string, namespace: string): Promise<string> {
+    return this._fetch(
+      `apps/flexy-vis?logdir=${encodeURIComponent(logdir)}&namespace=${encodeURIComponent(
         namespace,
       )}`,
       undefined,
@@ -449,3 +491,4 @@ export enum PipelineVersionSortKeys {
   CREATED_AT = 'created_at',
   NAME = 'name',
 }
+
