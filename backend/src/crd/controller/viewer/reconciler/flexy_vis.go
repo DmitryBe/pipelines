@@ -21,7 +21,8 @@ import (
 
 const flexyVisTargetPort = 8501
 
-const flexyVisDefaultImage = "dmitryb/kf-flexy-vis-loader:latest"
+const flexyVisDefaultImage = "mkplmleregistry.azurecr.io/ml-pipeline/kf-flexy-vis-loader:latest"
+const imagePullSecret = "mkplmleregistry-k8s-ds"
 const gitSecret = "bot:Vnky9HGuzQ9FBn48DWbs" // move to secrets
 
 type FlexyVis struct {
@@ -169,9 +170,9 @@ func (t *FlexyVis) setPodSpecForFlexyVis(view *viewerV1beta1.Viewer, s *corev1.P
 		gitSource = fmt.Sprintf("%v", val)
 		delete(flexyVisParams, "source")
 	}
-	if val, ok := flexyVisParams["entry_point"]; ok {
+	if val, ok := flexyVisParams["entrypoint"]; ok {
 		entryPoint = fmt.Sprintf("%v", val)
-		delete(flexyVisParams, "entry_point")
+		delete(flexyVisParams, "entrypoint")
 	}
 
 	c := &s.Containers[0]
@@ -196,6 +197,10 @@ func (t *FlexyVis) setPodSpecForFlexyVis(view *viewerV1beta1.Viewer, s *corev1.P
 		corev1.EnvVar{Name: "GIT_PROJECT_URL", Value: gitSource},
 		corev1.EnvVar{Name: "GIT_SECRET", Value: gitSecret},
 		corev1.EnvVar{Name: "ENTRY_POINT", Value: entryPoint},
+	}
+
+	s.ImagePullSecrets = []corev1.LocalObjectReference{
+		corev1.LocalObjectReference{Name: imagePullSecret},
 	}
 }
 
