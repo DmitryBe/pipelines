@@ -237,11 +237,14 @@ export class OutputArtifactLoader {
     if (!params.has("entry_point")) {
       throw new Error('entry_point is required.');
     }
+    var entryPoint = params.get("entry_point") || ''
+    params.delete("entry_point");
     
     WorkflowParser.parseStoragePath(metadata.source);
     return {
       type: PlotType.FLEXY_VIS,
-      url: metadata.source,
+      source: metadata.source,
+      entryPoint: entryPoint,
       namespace,
       params
     };

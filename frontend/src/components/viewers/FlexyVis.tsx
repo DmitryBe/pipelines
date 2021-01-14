@@ -42,6 +42,7 @@ export const css = stylesheet({
   },
   select: {
     minHeight: 50,
+    width:500,
   },
   shortButton: {
     width: 50,
@@ -55,7 +56,8 @@ export const css = stylesheet({
 });
 
 export interface FlexyVisViewerConfig extends ViewerConfig {
-  url: string;
+  source: string;
+  entryPoint: string;
   namespace: string;
   params: Map<string, string>;
 }
@@ -73,6 +75,10 @@ interface FlexyVisViewerState {
   // When podAddress is not null, we need to further tell whether the TensorBoard pod is accessible or not
   visReady: boolean;
   errorMessage?: string;
+  
+  source: string;
+  entryPoint: string;
+  namespace: string;
   paramsUrlStr: string;
 }
 
@@ -85,8 +91,8 @@ class FlexyVisViewer extends Viewer<FlexyVisViewerProps, FlexyVisViewerState> {
   constructor(props: any) {
     super(props);
 
-    let params = this.props.configs.map(c => c.params)[0]
-    let paramsUrlStr = Array.from(params).map(x => `${x[0]}=${encodeURIComponent(x[1])}`).join("&")
+    let firstConfig = this.props.configs[0];
+    let paramsUrlStr = Array.from(firstConfig.params).sort().map(x => `${x[0]}=${encodeURIComponent(x[1])}`).join("&")
 
     this.state = {
       busy: false,
@@ -94,7 +100,11 @@ class FlexyVisViewer extends Viewer<FlexyVisViewerProps, FlexyVisViewerState> {
       podAddress: '',
       visReady: false,
       errorMessage: undefined,
-      paramsUrlStr: paramsUrlStr,
+
+      source: firstConfig.source,
+      entryPoint: firstConfig.entryPoint,
+      namespace: firstConfig.namespace,
+      paramsUrlStr: paramsUrlStr, 
     };
   }
 
@@ -149,7 +159,7 @@ class FlexyVisViewer extends Viewer<FlexyVisViewerProps, FlexyVisViewerState> {
                 ``
               ) : (
                 <div className={css.warningText}>
-                  Visualisation is starting, and you may need to wait for a few minutes.
+                  [doesn't work yet] Visualisation is starting, and you may need to wait for a few minutes.
                 </div>
               )}
             </a>
@@ -205,15 +215,28 @@ class FlexyVisViewer extends Viewer<FlexyVisViewerProps, FlexyVisViewerState> {
         {!this.state.podAddress && (
           <div>
             <div className={padding(30, 'b')}>
-              <FormControl className={css.formControl}>
-                <InputLabel htmlFor='params-url'>Params</InputLabel>
+              <FormControl className={css.formControl} >
+                {/* <InputLabel >Source</InputLabel> */}
                 <Input 
-                  id="params-url" 
-                  aria-describedby="params-url" 
-                  readOnly={false}
+                  id="config-source" 
+                  className={css.select}
+                  readOnly={true}
+                  // onChange={this.handleParamsUpdate}
+                  defaultValue={this.state.source} />
+                {/* <InputLabel htmlFor='config-entry-point'>Entry point</InputLabel> */}
+                <Input 
+                  id="config-entry-point" 
+                  className={css.select}
+                  readOnly={true}
+                  // onChange={this.handleParamsUpdate}
+                  defaultValue={this.state.entryPoint} />
+                {/* <InputLabel htmlFor='config-params'>Params</InputLabel> */}
+                <Input 
+                  id="config-params" 
+                  className={css.select}
+                  readOnly={true}
                   onChange={this.handleParamsUpdate}
                   defaultValue={this.state.paramsUrlStr} />
-                <FormHelperText id="params-url">default values can be changed</FormHelperText>
               </FormControl>
             </div>
             <div>
@@ -238,14 +261,8 @@ class FlexyVisViewer extends Viewer<FlexyVisViewerProps, FlexyVisViewerState> {
     this.setState({ deleteDialogOpen: false });
   };
 
-  private _getNamespace(): string {
-    // TODO: We should probably check if all configs have the same namespace.
-    return this.props.configs[0]?.namespace || '';
-  }
-
-  private _buildUrl(): string {
-    const urls = this.props.configs.map(c => c.url).sort();
-    return urls.length === 1 ? urls[0] : urls.map((c, i) => `Series${i + 1}:` + c).join(',');
+  private _buildUrlParams(): string {
+    return `source=${encodeURIComponent(this.state.source)}&entrypoint=${encodeURIComponent(this.state.entryPoint)}&namespace=${encodeURIComponent(this.state.namespace)}&${this.state.paramsUrlStr}`
   }
 
   private async _checkFlexVisPodStatus(): Promise<void> {
@@ -267,12 +284,11 @@ class FlexyVisViewer extends Viewer<FlexyVisViewerProps, FlexyVisViewerState> {
   private async _checkFlexyVisApp(): Promise<void> {
     this.setState({ busy: true }, async () => {
       try {
-        let url = this._buildUrl()
-        logger.verbose(url)
+        let urlParams = this._buildUrlParams()
+        logger.verbose(urlParams)
 
         const { podAddress, } = await Apis.getFlexyVisApp(
-          this._buildUrl(),
-          this._getNamespace(),
+          this._buildUrlParams(),
         );
         if (podAddress) {
           this.setState({ busy: false, podAddress });
@@ -292,9 +308,7 @@ class FlexyVisViewer extends Viewer<FlexyVisViewerProps, FlexyVisViewerState> {
     this.setState({ busy: true, errorMessage: undefined }, async () => {
       try { 
         await Apis.startFlexyVisApp(
-          this._buildUrl(),
-          this._getNamespace(),
-          this.state.paramsUrlStr,
+          this._buildUrlParams()
         );
         this.setState({ busy: false, visReady: false }, () => {
           this._checkFlexyVisApp();
@@ -310,7 +324,7 @@ class FlexyVisViewer extends Viewer<FlexyVisViewerProps, FlexyVisViewerState> {
     // and return to the select & start tensorboard page
     this.setState({ busy: true, errorMessage: undefined }, async () => {
       try {
-        await Apis.deleteFlexyVisApp(this._buildUrl(), this._getNamespace());
+        await Apis.deleteFlexyVisApp(this._buildUrlParams());
         this.setState({
           busy: false,
           deleteDialogOpen: false,

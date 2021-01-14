@@ -267,13 +267,10 @@ export class Apis {
   }
 
   public static getFlexyVisApp(
-    logdir: string,
-    namespace: string,
+    urlParams: string,
   ): Promise<{ podAddress: string; tfVersion: string }> {
     return this._fetchAndParse<{ podAddress: string; tfVersion: string }>(
-      `apps/flexy-vis?logdir=${encodeURIComponent(logdir)}&namespace=${encodeURIComponent(
-        namespace,
-      )}`,
+      `apps/flexy-vis?${urlParams}`,
     );
   }
 
@@ -296,12 +293,10 @@ export class Apis {
   }
 
   public static startFlexyVisApp(
-    logdir: string,
-    namespace: string,
-    paramsUrlStr: string,
+    urlParams: string,
   ): Promise<string> {
     return this._fetch(
-      `apps/flexy-vis?logdir=${encodeURIComponent(logdir)}&source=${encodeURIComponent(logdir)}&namespace=${encodeURIComponent(namespace)}&${paramsUrlStr}`,
+      `apps/flexy-vis?${urlParams}`,
       undefined,
       undefined,
       { headers: { 'content-type': 'application/json' }, method: 'POST' },
@@ -336,11 +331,11 @@ export class Apis {
     );
   }
 
-  public static deleteFlexyVisApp(logdir: string, namespace: string): Promise<string> {
+  public static deleteFlexyVisApp(
+      urlParams: string
+    ): Promise<string> {
     return this._fetch(
-      `apps/flexy-vis?logdir=${encodeURIComponent(logdir)}&namespace=${encodeURIComponent(
-        namespace,
-      )}`,
+      `apps/flexy-vis?${urlParams}`,
       undefined,
       undefined,
       { method: 'DELETE' },

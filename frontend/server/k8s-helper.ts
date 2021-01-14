@@ -348,8 +348,12 @@ export const TEST_ONLY = {
 
 /** Flexy-vis */
 
+function getNameOfFlexyVisViewerResource(params: object): string {
+  var paramsStr = Object.entries(params).map(x => `${x[0]}=${x[1]}`).join("&")  
+  return 'viewer-' + crypto.SHA1(paramsStr);
+}
+
 export async function newFlexyVisInstance(
-  logdir: string,
   namespace: string,
   params: object,
   podTemplateSpec: object = defaultPodTemplateSpec,
@@ -368,7 +372,7 @@ export async function newFlexyVisInstance(
     apiVersion: viewerGroup + '/' + viewerVersion,
     kind: 'Viewer',
     metadata: {
-      name: getNameOfViewerResource(logdir),
+      name: getNameOfFlexyVisViewerResource(params),
       namespace,
     },
     spec: {
@@ -387,16 +391,19 @@ export async function newFlexyVisInstance(
 }
 
 export async function getFlexyVisInstance(
-  logdir: string,
   namespace: string,
+  params: object
 ): Promise<{ podAddress: string; }> {
+
+  var viewerResName = getNameOfFlexyVisViewerResource(params)
+
   return await k8sV1CustomObjectClient
     .getNamespacedCustomObject(
       viewerGroup,
       viewerVersion,
       namespace,
       viewerPlural,
-      getNameOfViewerResource(logdir),
+      viewerResName,
     )
     .then(
       // Viewer CRD pod has tensorboard instance running at port 6006 while
@@ -421,7 +428,7 @@ export async function getFlexyVisInstance(
       err => {
         // This is often expected, so only use debug level for logging.
         console.debug(
-          `Failed getting viewer custom object for logdir=${logdir} in ${namespace} namespace, err: `,
+          `Failed getting viewer custom object for name=${viewerResName} in ${namespace} namespace, err: `,
           err?.body || err,
         );
         return { podAddress: '' };
@@ -429,13 +436,16 @@ export async function getFlexyVisInstance(
     );
 }
 
-export async function deleteFlexyVisInstance(logdir: string, namespace: string): Promise<void> {
+export async function deleteFlexyVisInstance(
+    namespace: string, 
+    params: object,
+  ): Promise<void> {
   // const currentPod = await getTensorboardInstance(logdir, namespace);
   // if (!currentPod.podAddress) {
   //   return;
   // }
 
-  const viewerName = getNameOfViewerResource(logdir);
+  const viewerName = getNameOfFlexyVisViewerResource(params);
   const deleteOption = new V1DeleteOptions();
 
   await k8sV1CustomObjectClient.deleteNamespacedCustomObject(

@@ -27,9 +27,15 @@ export const getFlexyVisHandlers = (
    * handler expects a query string `logdir`.
    */
   const get: Handler = async (req, res) => {
-    const { logdir, namespace } = req.query;    
-    if (!logdir) {
-      res.status(400).send('logdir argument is required');
+    const { source, entrypoint, namespace } = req.query;
+    console.info(req.query)
+    
+    if (!source) {
+      res.status(400).send('source argument is required');
+      return;
+    }
+    if (!entrypoint) {
+      res.status(400).send('entrypoint argument is required');
       return;
     }
     if (!namespace) {
@@ -50,7 +56,7 @@ export const getFlexyVisHandlers = (
         res.status(401).send(authError.message);
         return;
       }
-      res.send(await k8sHelper.getFlexyVisInstance(logdir, namespace));
+      res.send(await k8sHelper.getFlexyVisInstance(namespace, req.query));
     } catch (err) {
       const details = await parseError(err);
       console.error(`Failed to list Flexy-vis pods: ${details.message}`, details.additionalInfo);
@@ -66,11 +72,15 @@ export const getFlexyVisHandlers = (
    * - `tfversion`
    */
   const create: Handler = async (req, res) => {
-    const { logdir, namespace } = req.query;
+    const { source, entrypoint, namespace } = req.query;
     console.info(req.query)
     
-    if (!logdir) {
-      res.status(400).send('logdir argument is required');
+    if (!source) {
+      res.status(400).send('source argument is required');
+      return;
+    }
+    if (!entrypoint) {
+      res.status(400).send('entrypoint argument is required');
       return;
     }
     if (!namespace) {
@@ -91,8 +101,8 @@ export const getFlexyVisHandlers = (
         res.status(401).send(authError.message);
         return;
       }
+
       await k8sHelper.newFlexyVisInstance(
-        logdir,
         namespace,
         req.query,
         tensorboardConfig.podTemplateSpec,
@@ -103,7 +113,7 @@ export const getFlexyVisHandlers = (
       //   60 * 1000,
       // );
       // res.send(tensorboardAddress);
-      res.send("not-created")
+      res.send("created")
     } catch (err) {
       const details = await parseError(err);
       console.error(`Failed to start Tensorboard app: ${details.message}`, details.additionalInfo);
@@ -117,9 +127,15 @@ export const getFlexyVisHandlers = (
    * `logdir` in the request.
    */
   const deleteHandler: Handler = async (req, res) => {
-    const { logdir, namespace } = req.query;
-    if (!logdir) {
-      res.status(400).send('logdir argument is required');
+    const { source, entrypoint, namespace } = req.query;
+    console.info(req.query)
+    
+    if (!source) {
+      res.status(400).send('source argument is required');
+      return;
+    }
+    if (!entrypoint) {
+      res.status(400).send('entrypoint argument is required');
       return;
     }
     if (!namespace) {
@@ -140,7 +156,7 @@ export const getFlexyVisHandlers = (
         res.status(401).send(authError.message);
         return;
       }
-      await k8sHelper.deleteFlexyVisInstance(logdir, namespace);
+      await k8sHelper.deleteFlexyVisInstance(namespace, req.query);
       res.send('Flexy-vis deleted.');
     } catch (err) {
       const details = await parseError(err);
