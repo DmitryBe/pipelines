@@ -21,7 +21,7 @@ import (
 
 const flexyVisTargetPort = 8501
 
-const flexyVisDefaultImage = "dmitryb/vis:latest"
+const flexyVisDefaultImage = "dmitryb/kf-flexy-vis-loader:latest"
 const gitSecret = "bot:Vnky9HGuzQ9FBn48DWbs" // move to secrets
 
 type FlexyVis struct {
