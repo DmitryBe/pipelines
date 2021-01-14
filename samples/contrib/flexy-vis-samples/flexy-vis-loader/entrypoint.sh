@@ -1,22 +1,51 @@
 #!/usr/bin/env bash
 set -e
 
-[ -z "$GIT_PROJECT_URL" ] && echo "GIT_PROJECT_URL is required" && exit 1
-[ -z "$GIT_SECRET" ] && echo "GIT_SECRET is required" && exit 1
+ERROR_FILE='/tmp/error.txt'
 
-# add secret to git project ul
-regex="^(https|http):\/\/(.+)" 
-if [[ $GIT_PROJECT_URL =~ $regex ]]
+[ -z "$GIT_PROJECT_URL" ] && echo "GIT_PROJECT_URL is required" >> $ERROR_FILE && IS_ERROR=1
+
+if [ -z "$GIT_SECRET" ]
 then
-    protocol="${BASH_REMATCH[1]}"
-    project_url="${BASH_REMATCH[2]}"    
+    # no auth
+    url="${GIT_PROJECT_URL}"
 else
-    echo "doesn't match" 
-    exit 1
+    # use secrets to pull
+    regex="^(https|http):\/\/(.+)" 
+    if [[ $GIT_PROJECT_URL =~ $regex ]]
+    then
+        protocol="${BASH_REMATCH[1]}"
+        project_url="${BASH_REMATCH[2]}"    
+    else
+        echo "error matching project url (example: https://github.com/account-name/repo-name.git)" >> $ERROR_FILE 
+        IS_ERROR=1
+    fi
+    url="${protocol}://${GIT_SECRET}@${project_url}"
 fi
 
-url="${protocol}://${GIT_SECRET}@${project_url}"
-# clone and change dir
-git clone $url && cd `echo $(basename $_ .git)`
+if [ -z "$IS_ERROR" ] 
+then
+    # no errors
+    # clone repo
+    # TODO: capture cloning errors
+    git clone $url && cd `echo $(basename $_ .git)`
 
-exec "$@"
+    # check entrypoint
+    if [ -n "$ENTRY_POINT" ]; then
+        echo 'check entrypoint'
+        if [ ! -f "$ENTRY_POINT" ]; then
+            echo "entry_point ${ENTRY_POINT} not exists" >> $ERROR_FILE 
+            IS_ERROR=1
+        fi
+    fi
+
+fi
+
+if [ -z "$IS_ERROR" ] 
+then
+    # no errors
+    exec "$@"
+else
+    # errors found
+    streamlit run error.py
+fi
