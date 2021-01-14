@@ -68,6 +68,15 @@ func New(cli client.Client, scheme *runtime.Scheme, opts *Options) (*Reconciler,
 	return &Reconciler{Client: cli, scheme: scheme, opts: opts}, nil
 }
 
+func contains(str viewerV1beta1.ViewerType, arr []viewerV1beta1.ViewerType) bool {
+	for _, a := range arr {
+		if a == str {
+			return true
+		}
+	}
+	return false
+}
+
 // Reconcile runs the main logic for reconciling the state of a viewer with a
 // corresponding deployment and service allowing users to access the view under
 // a specific path.
@@ -84,13 +93,23 @@ func (r *Reconciler) Reconcile(req reconcile.Request) (reconcile.Result, error) 
 		// Error reading the object - requeue the request.
 		return reconcile.Result{}, err
 	}
-	glog.Infof("Got instance: %+v", view)
+	// glog.Infof("Got instance: %+v", view)
 
-	// Ignore other viewer types for now.
-	if view.Spec.Type != viewerV1beta1.ViewerTypeTensorboard {
+	if !contains(view.Spec.Type, []viewerV1beta1.ViewerType{viewerV1beta1.ViewerTypeTensorboard, viewerV1beta1.ViewerTypeFlexyVis}) {
 		glog.Infof("Unsupported spec type: %q", view.Spec.Type)
 		// Return nil to indicate nothing more to do here.
 		return reconcile.Result{}, nil
+	}
+
+	switch view.Spec.Type {
+	case viewerV1beta1.ViewerTypeFlexyVis:
+		fmt.Println("flexy")
+		t := FlexyVis{reconcile: r}
+		return t.Run(req)
+	case viewerV1beta1.ViewerTypeTensorboard:
+		fmt.Println("tensorboard")
+	default:
+		fmt.Println("unsupported")
 	}
 
 	if len(view.Spec.TensorboardSpec.TensorflowImage) == 0 {
@@ -187,6 +206,10 @@ func setPodSpecForTensorboard(view *viewerV1beta1.Viewer, s *corev1.PodSpec) {
 
 	c.Ports = []corev1.ContainerPort{
 		corev1.ContainerPort{ContainerPort: viewerTargetPort},
+	}
+
+	c.Env = []corev1.EnvVar{
+		corev1.EnvVar{Name: "VAR1", Value: "1"},
 	}
 
 }

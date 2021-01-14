@@ -53,6 +53,7 @@ const (
 	// underlying type is Tensorboard. An instance named `instance123` will serve
 	// under /tensorboard/instance123.
 	ViewerTypeTensorboard ViewerType = "tensorboard"
+	ViewerTypeFlexyVis    ViewerType = "flexy-vis"
 )
 
 // TensorboardSpec contains fields specific to launching a tensorboard instance.
@@ -63,12 +64,21 @@ type TensorboardSpec struct {
 	TensorflowImage string `json:"tensorflowImage"`
 }
 
+type FlexyVisSpec struct {
+	// LogDir is the location of the log directory to be read by tensorboard, i.e.,
+	// ---log_dir.
+	LogDir     string `json:"logDir"`
+	Source     string `json:"Source"`
+	EntryPoint string `json:"EntryPoint"`
+}
+
 // ViewerSpec is the spec for a Viewer resource.
 type ViewerSpec struct {
 	// Type is the type of the viewer.
 	Type ViewerType `json:"type"`
 	// TensorboardSpec is only checked if the Type is ViewerTypeTensorboard.
 	TensorboardSpec TensorboardSpec `json:"tensorboardSpec,omitempty"`
+	FlexyVisSpec    FlexyVisSpec    `json:"flexyVisSpec,omitempty"`
 	// PodTemplateSpec is the template spec used to launch the viewer.
 	PodTemplateSpec v1.PodTemplateSpec `json:"podTemplateSpec"`
 }
